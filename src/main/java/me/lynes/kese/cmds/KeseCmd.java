@@ -88,16 +88,16 @@ public class KeseCmd implements CommandExecutor, TabCompleter {
 
         if (args.length > 0 && args[0].equalsIgnoreCase("al")) {
             if (args.length == 2) {
-                double amount;
+                int amount;
                 try {
                     amount = Integer.parseInt(args[1]);
                 } catch (NumberFormatException e) {
-                    player.sendMessage("§cMiktar sayı olmalıdır.");
+                    player.sendMessage("§cMiktar tam sayı olmalıdır.");
                     return true;
                 }
 
                 if (amount < 0) {
-                    player.sendMessage("§cMiktar sayı olmalıdır.");
+                    player.sendMessage("§cMiktar tam sayı olmalıdır.");
                     return true;
                 }
 
@@ -112,20 +112,28 @@ public class KeseCmd implements CommandExecutor, TabCompleter {
                     player.sendMessage("§6§lKese §f" + economy.format(bal) + " altın aldın.");
                     player.sendMessage("Yeni altın miktarı §6" + economy.format(economy.getBalance(player)) + " §6Altın");
                     player.sendMessage("§c§l- §c" + formatted);
-                    HashMap<Integer, ItemStack> map = player.getInventory().addItem(new ItemStack(Material.GOLD_INGOT, (int) amount));
+
+                    // Oyuncunun envanterine en fazla 64 altın ekle,
+                    //  anti-crashler  64den fazla olan itemları bölmeye çalıştığımızda oyuncuyu kickliyor
+                    int maxStackSize = 64;
+                    int numStacks = amount / maxStackSize;
+                    int remainder = amount % maxStackSize;
+
+                    for (int i = 0; i < numStacks; i++) {
+                        player.getInventory().addItem(new ItemStack(Material.GOLD_INGOT, maxStackSize));
+                    }
+
+                    if (remainder > 0) {
+                        player.getInventory().addItem(new ItemStack(Material.GOLD_INGOT, remainder));
+                    }
+
+                    // Eğer envanter doluysa kalan altınlar yere düşecek
+                    HashMap<Integer, ItemStack> map = player.getInventory().addItem(new ItemStack(Material.GOLD_INGOT, amount));
                     if (!map.isEmpty() && map.get(0).getAmount() != 0) {
                         player.sendMessage("§cEnvanterinde yer kalmadığı için altınlar yere düştü!");
 
-                        if (map.get(0).getAmount() <= 64) {
-                            player.getWorld().dropItem(player.getLocation(), new ItemStack(Material.GOLD_INGOT, map.get(0).getAmount()));
-                        } else {
-                            for (int i = map.get(0).getAmount(); i >= 64; i = i - 64) {
-                                player.getWorld().dropItem(player.getLocation(), new ItemStack(Material.GOLD_INGOT, 64));
-                            }
-
-                            if (map.get(0).getAmount() % 64 != 0) {
-                                player.getWorld().dropItem(player.getLocation(), new ItemStack(Material.GOLD_INGOT, map.get(0).getAmount() % 64));
-                            }
+                        for (Map.Entry<Integer, ItemStack> entry : map.entrySet()) {
+                            player.getWorld().dropItem(player.getLocation(), entry.getValue());
                         }
                     }
                     return true;
@@ -134,7 +142,7 @@ public class KeseCmd implements CommandExecutor, TabCompleter {
                     return true;
                 }
             } else {
-                player.sendMessage("§cMiktar sayı olmalıdır.");
+                player.sendMessage("§cMiktar tam sayı olmalıdır.");
                 return true;
             }
         }
